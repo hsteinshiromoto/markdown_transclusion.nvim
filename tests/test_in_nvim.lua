@@ -18,7 +18,7 @@ vim.cmd('set filetype=markdown')
 -- Now test our plugin
 require('markdown_transclusion').setup({
     -- Override the notes directory to use our local tests/testnotes/ folder
-    notes_dir = vim.fn.getcwd() .. '/tests/testnotes',
+    notes_dir = vim.fn.getcwd() .. '/testnotes',
     
     -- Enable debug messages
     show_warnings = true,

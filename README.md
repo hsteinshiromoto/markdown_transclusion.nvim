@@ -114,7 +114,7 @@ require("markdown_transclusion").setup({
   valid_extensions = { "md", "markdown" },
 
   -- Pattern to identify transclusion syntax (supports section transclusion)
-  transclusion_pattern = "!%[%[(.-)(?:#(.-))?%]%]",
+  transclusion_pattern = "!%[%[([^#]*)#?([^%]]*)%]%]",
 
   -- Virtual text to indicate transclusion
   virtual_text_enabled = true,
@@ -188,6 +188,39 @@ When you open `MainNote.md` in Neovim, the plugin will:
 - Highlight the transclusion markers
 - Add virtual text showing the source files and sections
 - Allow you to preview or expand the content on demand
+
+## Testing
+
+The plugin includes several test files in the `tests/` directory:
+
+- `pattern_test.lua`: Tests different Lua patterns for matching transclusions
+- `test_init.lua`: Tests pattern matching with the configured pattern
+- `test_in_nvim.lua`: Provides an interactive test in Neovim with instructions
+- `debug.lua`: Debugging script for testing plugin functions
+- `basic.lua`: Basic test environment setup
+
+To run the interactive test, open Neovim and execute:
+```
+:source tests/test_in_nvim.lua
+```
+
+This will set up a test environment with sample transclusion syntax and guide you through testing the preview and expand functionality.
+
+## Troubleshooting
+
+If the transclusion doesn't work as expected:
+
+1. Ensure your pattern syntax is correct. The plugin uses Lua patterns, not regular expressions.
+   - The pattern `!%[%[([^#]*)#?([^%]]*)%]%]` properly captures both note names and section names.
+   - Note that Lua patterns do not support the `(?:...)` non-capturing group syntax found in other regex implementations.
+2. Check if the `notes_dir` is correctly set and the files exist in that directory.
+3. Make sure your transclusions follow the format `![[note]]` or `![[note#Section]]`.
+4. Use the debug tools in `tests/debug.lua` to check pattern matching.
+
+### Common Issues
+
+- **"No transclusion found on current line"**: This error often appears when pressing `gp` or `ge` if the pattern matching is not working. Make sure your transclusion pattern is correctly set.
+- **File not found**: Make sure your note file exists in the configured `notes_dir` directory. Check the debug logs for the exact path being searched.
 
 ## Screenshots
 
