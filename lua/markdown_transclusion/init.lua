@@ -2,6 +2,12 @@
 -- A Neovim plugin that implements Obsidian-style transclusion functionality
 
 local config = require("markdown_transclusion.config")
+-- Try to load snacks.nvim safely
+local has_snacks, snacks = pcall(require, "snacks")
+if not has_snacks then
+	vim.notify("snacks.nvim not found; falling back to inline expansion for transclusions", vim.log.levels.WARN)
+end
+
 local M = {}
 
 -- Will hold the actual configuration after setup
@@ -13,6 +19,12 @@ M.gitignore_patterns = nil
 function M.setup(opts)
 	-- Apply and validate config
 	M.config = config.apply(opts)
+
+	-- Disable snacks integration if the plugin is not available
+	if not has_snacks and M.config.use_snacks then
+		M.config.use_snacks = false
+		vim.notify("snacks.nvim is required for floating window transclusions but was not found", vim.log.levels.WARN)
+	end
 
 	-- Setup highlight groups
 	config.setup_highlights()
@@ -594,51 +606,90 @@ function M.expand_transclusion()
 		print("Extracted section content: " .. #content .. " bytes")
 	end
 
-	-- Get leading whitespace
-	local leading_whitespace = line:match("^%s*") or ""
-	print("Leading whitespace: '" .. leading_whitespace .. "'")
-
 	-- Split the content into lines
 	local content_lines = vim.split(content, "\n")
 	print("Content split into " .. #content_lines .. " lines")
 	
-	-- Preview the content we're going to insert
-	print("Content to insert:")
-	for i = 1, math.min(5, #content_lines) do
-		print("  " .. i .. ": " .. content_lines[i])
-	end
-	if #content_lines > 5 then
-		print("  ... (truncated, total " .. #content_lines .. " lines)")
-	end
+	-- Check if we should use snacks.nvim
+	if M.config.use_snacks then
+		-- Create title for the window
+		local title = note_name
+		if section_name then
+			title = title .. " > " .. section_name
+		end
+		
+		-- Merge default window options with user config
+		local win_opts = vim.tbl_deep_extend("force", M.config.snacks_window or {}, {
+			title = title,
+			width = math.min(M.config.snacks_window.width or 120, vim.o.columns - 10),
+			height = math.min(math.min(#content_lines + 2, M.config.snacks_window.height or 20), vim.o.lines - 10),
+		})
+		
+		-- Display the expanded content in a snacks window
+		local win = snacks.win(content_lines, {
+			filetype = "markdown",
+			mappings = {
+				n = {
+					-- Close the window with q or Escape
+					["q"] = function(w) snacks.close(w) end,
+					["<Esc>"] = function(w) snacks.close(w) end,
+					
+					-- Allow replacing the current line with the expanded content
+					["<CR>"] = function(w)
+						M.expand_in_place(bufnr, line_idx, line, start_idx, end_idx, note_name, content_lines)
+						snacks.close(w)
+					end
+				}
+			}
+		}, win_opts)
+		
+		-- Create a footer with instructions
+		vim.api.nvim_buf_set_lines(win.buf, -1, -1, false, {
+			"",
+			"Press <CR> to expand in-place, q or <Esc> to close"
+		})
+		
+		-- Highlight the footer as a comment
+		local ns_id = vim.api.nvim_create_namespace("markdown_transclusion_snacks")
+		vim.api.nvim_buf_add_highlight(win.buf, ns_id, "Comment", #content_lines + 1, 0, -1)
+		vim.api.nvim_buf_add_highlight(win.buf, ns_id, "Comment", #content_lines + 2, 0, -1)
 
+		vim.notify("Expanded transclusion of '" .. note_name .. "' in a window", vim.log.levels.INFO)
+	else
+		-- Use the original expand in place behavior
+		M.expand_in_place(bufnr, line_idx, line, start_idx, end_idx, note_name, content_lines)
+	end
+	
+	print("=== EXPANSION COMPLETE ===\n")
+end
+
+-- Helper function to expand a transclusion in place
+function M.expand_in_place(bufnr, line_idx, line, start_idx, end_idx, note_name, content_lines)
+	-- Get leading whitespace
+	local leading_whitespace = line:match("^%s*") or ""
+	
 	-- Add leading whitespace to each line except the first
 	for i = 2, #content_lines do
 		content_lines[i] = leading_whitespace .. content_lines[i]
 	end
-
+	
 	-- Replace the transclusion marker with the content
 	local before_marker = line:sub(1, start_idx - 1)
 	local after_marker = line:sub(end_idx + 1)
-	print("Before marker: '" .. before_marker .. "'")
-	print("After marker: '" .. after_marker .. "'")
-
+	
 	-- First line combines before_marker + first content line + after_marker
 	local first_line = before_marker .. content_lines[1] .. after_marker
-	print("First line will be: " .. first_line)
-
+	
 	-- Prepare the replacement lines
 	local replacement_lines = { first_line }
 	for i = 2, #content_lines do
 		table.insert(replacement_lines, content_lines[i])
 	end
-
-	print("Will replace line " .. (line_idx + 1) .. " with " .. #replacement_lines .. " lines")
+	
 	-- Replace the current line with the expanded content
 	vim.api.nvim_buf_set_lines(bufnr, line_idx, line_idx + 1, false, replacement_lines)
-
-	-- Notify user
-	vim.notify("Expanded transclusion of '" .. note_name .. "'", vim.log.levels.INFO)
-	print("=== EXPANSION COMPLETE ===\n")
+	
+	vim.notify("Expanded transclusion of '" .. note_name .. "' in-place", vim.log.levels.INFO)
 end
 
 -- Set up key mappings

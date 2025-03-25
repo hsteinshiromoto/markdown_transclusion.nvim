@@ -35,6 +35,18 @@ M.defaults = {
 
 	-- Automatically setup keymaps
 	setup_keymaps = true,
+	
+	-- Use snacks.nvim for expanded transclusions (floating window)
+	use_snacks = true,
+	
+	-- Snacks window configuration
+	snacks_window = {
+		border = "rounded",
+		relative = "cursor",
+		width = 80,  -- Will be adjusted based on content and screen size
+		height = 20, -- Will be adjusted based on content and screen size
+		style = "minimal",
+	},
 }
 
 -- Function to validate and merge user config with defaults

@@ -181,8 +181,32 @@ require("markdown_transclusion").setup({
   
   -- Automatically setup keymaps
   setup_keymaps = true,
+  
+  -- Use snacks.nvim for expanded transclusions (floating window)
+  use_snacks = true,
+  
+  -- Snacks window configuration
+  snacks_window = {
+    border = "rounded",
+    relative = "cursor",
+    width = 80,  -- Will be adjusted based on content and screen size
+    height = 20, -- Will be adjusted based on content and screen size
+    style = "minimal",
+  },
 })
 ```
+
+### Using snacks.nvim for Transclusion Expansion
+
+The plugin now supports using [snacks.nvim](https://github.com/creativenull/snacks.nvim) to display expanded transclusions in a floating window. This provides a better user experience with the ability to preview the content without modifying your document, and then decide whether to expand it in place.
+
+To use this feature:
+1. Make sure you have snacks.nvim installed
+2. Enable the feature in your configuration with `use_snacks = true`
+3. When you press `ge` on a transclusion marker, it will open a floating window with the expanded content
+4. Press `<CR>` to expand in place, or `q`/`<Esc>` to close the window
+
+If snacks.nvim is not available, the plugin will fall back to the original behavior of expanding transclusions directly in place.
 
 ### Customizing Key Mappings
 
