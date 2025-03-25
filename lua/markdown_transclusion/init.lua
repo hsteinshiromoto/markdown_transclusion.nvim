@@ -6,6 +6,8 @@ local M = {}
 
 -- Will hold the actual configuration after setup
 M.config = {}
+-- Store parsed gitignore patterns
+M.gitignore_patterns = nil
 
 -- Setup function to initialize the plugin with user configuration
 function M.setup(opts)
@@ -14,6 +16,11 @@ function M.setup(opts)
 
 	-- Setup highlight groups
 	config.setup_highlights()
+	
+	-- Load gitignore patterns if configured
+	if M.config.respect_gitignore then
+		M.load_gitignore_patterns()
+	end
 
 	-- Create autocommands for the plugin
 	local augroup = vim.api.nvim_create_augroup("ObsidianTransclusion", { clear = true })
@@ -53,6 +60,79 @@ function M.setup(opts)
 	if M.config.setup_keymaps then
 		M.setup_keymaps()
 	end
+end
+
+-- Function to load and parse .gitignore patterns
+function M.load_gitignore_patterns()
+	-- Find git root directory
+	local git_root = vim.fn.fnamemodify(vim.fn.finddir('.git', '.;'), ':h')
+	local gitignore_path = git_root .. '/.gitignore'
+	
+	if vim.fn.filereadable(gitignore_path) ~= 1 then
+		print("No .gitignore file found at: " .. gitignore_path)
+		M.gitignore_patterns = {}
+		return
+	end
+	
+	print("Loading .gitignore patterns from: " .. gitignore_path)
+	local file = io.open(gitignore_path, "r")
+	if not file then
+		print("Failed to open .gitignore file")
+		M.gitignore_patterns = {}
+		return
+	end
+	
+	local patterns = {}
+	for line in file:lines() do
+		-- Skip empty lines and comments
+		if line ~= "" and not line:match("^%s*#") then
+			-- Trim whitespace
+			line = line:gsub("^%s*(.-)%s*$", "%1")
+			-- Convert glob patterns to Lua patterns
+			local lua_pattern = line:gsub("%.", "%%.")
+									  :gsub("%*%*", ".*")
+									  :gsub("%*", "[^/]*")
+									  :gsub("%?", ".")
+			table.insert(patterns, lua_pattern)
+		end
+	end
+	
+	file:close()
+	M.gitignore_patterns = patterns
+	print("Loaded " .. #patterns .. " .gitignore patterns")
+end
+
+-- Function to check if a path should be ignored
+function M.should_ignore_path(path)
+	-- Check against explicitly ignored folders
+	local path_components = vim.split(path, "/")
+	local dir_name = path_components[#path_components]
+	
+	-- Check if the directory is in the ignore_folders list
+	for _, ignored_folder in ipairs(M.config.ignore_folders) do
+		if dir_name == ignored_folder then
+			print("Ignoring directory (in ignore_folders): " .. path)
+			return true
+		end
+	end
+	
+	-- Check against gitignore patterns if enabled
+	if M.config.respect_gitignore and M.gitignore_patterns then
+		-- Get the relative path from the notes_dir
+		local relative_path = path
+		if path:sub(1, #M.config.notes_dir) == M.config.notes_dir then
+			relative_path = path:sub(#M.config.notes_dir + 2) -- +2 to account for the trailing slash
+		end
+		
+		for _, pattern in ipairs(M.gitignore_patterns) do
+			if relative_path:match(pattern) then
+				print("Ignoring path (matched gitignore pattern): " .. path)
+				return true
+			end
+		end
+	end
+	
+	return false
 end
 
 -- Find a note file by name
@@ -107,8 +187,11 @@ function M.find_note_file(name)
 				local path = dir .. "/" .. name_scan
 				
 				if type_scan == "directory" then
-					print("Searching subdirectory: " .. path)
-					search_dir(path)
+					-- Skip if this directory should be ignored
+					if not M.should_ignore_path(path) then
+						print("Searching subdirectory: " .. path)
+						search_dir(path)
+					end
 				elseif type_scan == "file" then
 					-- Check if file matches the name we're looking for
 					local file_base = vim.fn.fnamemodify(name_scan, ":r")

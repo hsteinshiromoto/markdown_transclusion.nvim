@@ -14,6 +14,12 @@ M.defaults = {
 	-- Search recursively in subdirectories
 	recursive_search = true,
 
+	-- Folders to ignore when searching for notes
+	ignore_folders = { ".git" },
+	
+	-- Whether to respect .gitignore patterns
+	respect_gitignore = true,
+
 	-- Pattern to identify transclusion syntax (default: Obsidian's ![[note]] with optional section)
 	transclusion_pattern = "!%[%[([^#]*)#?([^%]]*)%]%]",
 
@@ -50,6 +56,11 @@ function M.apply(user_config)
 	-- Ensure valid_extensions is a table
 	if type(config.valid_extensions) == "string" then
 		config.valid_extensions = { config.valid_extensions }
+	end
+
+	-- Ensure ignore_folders is a table
+	if type(config.ignore_folders) == "string" then
+		config.ignore_folders = { config.ignore_folders }
 	end
 
 	-- Make sure transclusion_pattern is valid

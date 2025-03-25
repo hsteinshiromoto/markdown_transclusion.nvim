@@ -117,6 +117,24 @@ If you have multiple files with the same base name in different subdirectories, 
 
 To disable recursive search, set `recursive_search = false` in your configuration.
 
+### Ignoring Folders
+
+The plugin supports ignoring specific folders when searching for notes. By default, it ignores the `.git` folder. You can customize the list of ignored folders in your configuration:
+
+```lua
+require("markdown_transclusion").setup({
+  -- Other options...
+  
+  -- Custom list of folders to ignore
+  ignore_folders = { ".git", "node_modules", "assets", ".obsidian" },
+  
+  -- Whether to respect .gitignore patterns (default: true)
+  respect_gitignore = true,
+})
+```
+
+When `respect_gitignore` is enabled, the plugin will also respect patterns defined in your `.gitignore` file, skipping any folders or files that match these patterns during the search.
+
 ### Key Mappings
 
 - `gp`: Preview the transcluded content in a floating window
@@ -141,6 +159,12 @@ require("markdown_transclusion").setup({
   
   -- Search recursively in subdirectories
   recursive_search = true,
+
+  -- Folders to ignore when searching for notes
+  ignore_folders = { ".git" },
+  
+  -- Whether to respect .gitignore patterns
+  respect_gitignore = true,
 
   -- Pattern to identify transclusion syntax (supports section transclusion)
   transclusion_pattern = "!%[%[([^#]*)#?([^%]]*)%]%]",
