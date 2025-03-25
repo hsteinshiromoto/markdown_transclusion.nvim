@@ -58,34 +58,43 @@ end
 -- Find a note file by name
 function M.find_note_file(name)
 	-- Debug info
-	vim.notify("Looking for note: " .. name .. " in directory: " .. M.config.notes_dir, vim.log.levels.INFO)
+	print("\n=== FINDING NOTE FILE ===")
+	print("Looking for note: '" .. name .. "'")
+	print("Notes directory: '" .. M.config.notes_dir .. "'")
+	print("Valid extensions: " .. table.concat(M.config.valid_extensions, ", "))
 
 	-- First try with the name as-is
 	local direct_path = M.config.notes_dir .. "/" .. name
-	vim.notify("Trying path: " .. direct_path, vim.log.levels.INFO)
+	print("Trying direct path: " .. direct_path)
 	if vim.fn.filereadable(direct_path) == 1 then
-		vim.notify("Found direct match: " .. direct_path, vim.log.levels.INFO)
+		print("✓ Found direct match: " .. direct_path)
 		return direct_path
+	else
+		print("✗ File not found at direct path")
 	end
 
 	-- Try with each valid extension
 	for _, ext in ipairs(M.config.valid_extensions) do
 		local path_with_ext = M.config.notes_dir .. "/" .. name .. "." .. ext
-		vim.notify("Trying path with extension: " .. path_with_ext, vim.log.levels.INFO)
+		print("Trying path with extension: " .. path_with_ext)
 		if vim.fn.filereadable(path_with_ext) == 1 then
-			vim.notify("Found with extension: " .. path_with_ext, vim.log.levels.INFO)
+			print("✓ Found with extension: " .. path_with_ext)
 			return path_with_ext
+		else
+			print("✗ File not found with extension: " .. ext)
 		end
 	end
 
 	-- Recursive search through subdirectories if enabled
 	if M.config.recursive_search then
+		print("Performing recursive search in: " .. M.config.notes_dir)
 		local found_files = {}
 		
 		-- Function to search recursively
 		local function search_dir(dir)
 			local handle = vim.loop.fs_scandir(dir)
 			if not handle then
+				print("✗ Cannot scan directory: " .. dir)
 				return
 			end
 			
@@ -98,6 +107,7 @@ function M.find_note_file(name)
 				local path = dir .. "/" .. name_scan
 				
 				if type_scan == "directory" then
+					print("Searching subdirectory: " .. path)
 					search_dir(path)
 				elseif type_scan == "file" then
 					-- Check if file matches the name we're looking for
@@ -105,6 +115,7 @@ function M.find_note_file(name)
 					local file_ext = vim.fn.fnamemodify(name_scan, ":e")
 					
 					if file_base == name and vim.tbl_contains(M.config.valid_extensions, file_ext) then
+						print("✓ Found matching file: " .. path)
 						table.insert(found_files, path)
 					end
 				end
@@ -115,18 +126,31 @@ function M.find_note_file(name)
 		
 		-- Return the first matching file if any found
 		if #found_files > 0 then
-			vim.notify("Found in subdirectory: " .. found_files[1], vim.log.levels.INFO)
+			print("✓ Found in subdirectory: " .. found_files[1])
 			return found_files[1]
+		else
+			print("✗ No files found in recursive search")
 		end
 		
 		-- If multiple files found, log a warning
 		if #found_files > 1 then
-			vim.notify("Multiple matching files found for note: " .. name, vim.log.levels.WARN)
+			print("⚠ Multiple matching files found: " .. #found_files)
+			for i, file in ipairs(found_files) do
+				print("  " .. i .. ": " .. file)
+			end
 		end
+	else
+		print("Recursive search is disabled")
+	end
+
+	-- Last resort: Check if the notes_dir is accessible
+	if vim.fn.isdirectory(M.config.notes_dir) ~= 1 then
+		print("⚠ Notes directory does not exist or is not accessible: " .. M.config.notes_dir)
 	end
 
 	-- Not found
-	vim.notify("Note not found: " .. name, vim.log.levels.WARN)
+	print("✗ Note not found: " .. name)
+	print("=== SEARCH COMPLETE ===\n")
 	return nil
 end
 
@@ -193,25 +217,38 @@ function M.render_transclusions()
 
 	-- Clear previous extmarks and virtual text
 	vim.api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
+	
+	-- Print debug information
+	print("Rendering transclusions in buffer: " .. bufnr)
 
 	-- Get all lines in the buffer
 	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 	local transclusions = {}
+	local count = 0
 
 	-- Find all transclusion markers
 	for i, line in ipairs(lines) do
 		local start_idx, end_idx, note_name, section_name = line:find(M.config.transclusion_pattern)
 
 		if start_idx then
+			count = count + 1
+			note_name = note_name:gsub("^%s*(.-)%s*$", "%1") -- Trim whitespace
+			section_name = section_name and section_name:gsub("^%s*(.-)%s*$", "%1") or nil -- Trim whitespace
+			
 			table.insert(transclusions, {
 				line_idx = i - 1, -- 0-indexed for API
 				start_idx = start_idx,
 				end_idx = end_idx,
-				note_name = note_name:gsub("^%s*(.-)%s*$", "%1"), -- Trim whitespace
-				section_name = section_name and section_name:gsub("^%s*(.-)%s*$", "%1") or nil, -- Trim whitespace
+				note_name = note_name,
+				section_name = section_name,
 			})
+			
+			print(string.format("Found transclusion #%d at line %d: %s%s", 
+				count, i, note_name, section_name and " (section: " .. section_name .. ")" or ""))
 		end
 	end
+	
+	print("Found " .. count .. " transclusions")
 
 	-- Process each transclusion
 	for _, t in ipairs(transclusions) do
@@ -230,13 +267,18 @@ function M.render_transclusions()
 					if t.section_name then
 						virtual_text = virtual_text .. " (section: " .. t.section_name .. ")"
 					end
+					
 					vim.api.nvim_buf_set_extmark(bufnr, namespace, t.line_idx, 0, {
-						virt_text = { { virtual_text, M.config.virtual_text_hl_group } },
+						virt_text = { { virtual_text, "ObsidianTransclusionVirtualText" } },
 						virt_text_pos = "eol",
 					})
+					
+					print("Added virtual text for " .. t.note_name)
 				end
 
-				-- Visually distinguish transclusion markers with highlighting
+				-- Highlight the different parts of the transclusion marker
+				
+				-- Highlight the ![[
 				vim.api.nvim_buf_add_highlight(
 					bufnr,
 					namespace,
@@ -245,6 +287,8 @@ function M.render_transclusions()
 					t.start_idx - 1,
 					t.start_idx + 2
 				)
+				
+				-- Highlight the note_name (and section if any)
 				vim.api.nvim_buf_add_highlight(
 					bufnr,
 					namespace,
@@ -253,6 +297,8 @@ function M.render_transclusions()
 					t.start_idx + 2,
 					t.end_idx - 2
 				)
+				
+				-- Highlight the closing ]]
 				vim.api.nvim_buf_add_highlight(
 					bufnr,
 					namespace,
@@ -261,58 +307,62 @@ function M.render_transclusions()
 					t.end_idx - 2,
 					t.end_idx
 				)
+				
+				print("Applied highlighting for transclusion at line " .. (t.line_idx + 1))
+			else
+				-- File exists but couldn't read content
+				if M.config.show_warnings then
+					vim.api.nvim_buf_add_highlight(
+						bufnr,
+						namespace,
+						"ObsidianTransclusionWarning",
+						t.line_idx,
+						0,
+						-1
+					)
+				end
 			end
-		elseif M.config.show_warnings then
-			-- Show warning for missing files
-			if M.config.virtual_text_enabled then
+		else
+			-- File not found
+			if M.config.show_warnings then
+				vim.api.nvim_buf_add_highlight(
+					bufnr,
+					namespace,
+					"ObsidianTransclusionWarning",
+					t.line_idx,
+					0,
+					-1
+				)
+				
+				-- Add warning as virtual text
 				vim.api.nvim_buf_set_extmark(bufnr, namespace, t.line_idx, 0, {
-					virt_text = {
-						{ " Warning: Note '" .. t.note_name .. "' not found", "ObsidianTransclusionWarning" },
-					},
+					virt_text = { { " Note not found: " .. t.note_name, "ObsidianTransclusionWarning" } },
 					virt_text_pos = "eol",
 				})
 			end
-
-			-- Highlight the missing file path differently
-			vim.api.nvim_buf_add_highlight(
-				bufnr,
-				namespace,
-				"ObsidianTransclusionMarker",
-				t.line_idx,
-				t.start_idx - 1,
-				t.start_idx + 2
-			)
-			vim.api.nvim_buf_add_highlight(
-				bufnr,
-				namespace,
-				"ObsidianTransclusionWarning",
-				t.line_idx,
-				t.start_idx + 2,
-				t.end_idx - 2
-			)
-			vim.api.nvim_buf_add_highlight(
-				bufnr,
-				namespace,
-				"ObsidianTransclusionMarker",
-				t.line_idx,
-				t.end_idx - 2,
-				t.end_idx
-			)
 		end
 	end
+	
+	print("Render complete - processed " .. #transclusions .. " transclusions")
 end
 
--- Function to preview transcluded content
+-- Preview transclusion in a floating window
 function M.preview_transclusion()
+	print("\n=== PREVIEW TRANSCLUSION ===")
 	local line = vim.api.nvim_get_current_line()
+	print("Current line: " .. line)
+
 	local start_idx, end_idx, note_name, section_name = line:find(M.config.transclusion_pattern)
 
 	if not start_idx then
 		vim.notify("No transclusion found on current line", vim.log.levels.INFO)
+		print("No transclusion found on current line")
 		return
 	end
 
 	note_name = note_name:gsub("^%s*(.-)%s*$", "%1") -- Trim whitespace
+	print("Previewing note: " .. note_name .. (section_name and (" section: " .. section_name) or ""))
+	
 	local file_path = M.find_note_file(note_name)
 
 	if not file_path then
@@ -332,65 +382,112 @@ function M.preview_transclusion()
 		content = M.extract_section(content, section_name)
 	end
 
-	-- Create a floating window to display the content
-	local width = math.min(80, vim.o.columns - 4)
-	local height = math.min(20, vim.o.lines - 4)
-
+	-- Create a more visually appealing floating window
+	
+	-- Split content into lines and remove trailing empty lines
+	local lines = vim.split(content, "\n")
+	while #lines > 0 and lines[#lines] == "" do
+		table.remove(lines)
+	end
+	
+	-- Calculate window dimensions
+	local width = 80
+	for _, line in ipairs(lines) do
+		width = math.max(width, #line + 4) -- Add padding
+	end
+	width = math.min(width, 120) -- Cap maximum width
+	
+	local height = math.min(#lines + 2, 20) -- Cap maximum height
+	
+	-- Position window near the cursor
+	local cursor_pos = vim.api.nvim_win_get_cursor(0)
+	local row = cursor_pos[1]
+	local col = cursor_pos[2]
+	
+	-- Create title
+	local title = " " .. note_name .. " "
+	if section_name then
+		title = title .. "(section: " .. section_name .. ") "
+	end
+	
+	-- Create the buffer for our floating window
 	local buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(content, "\n"))
-
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+	
 	-- Set buffer options
-	vim.api.nvim_buf_set_option(buf, "modifiable", false)
-	vim.api.nvim_buf_set_option(buf, "filetype", "markdown")
-
-	local opts = {
-		relative = "cursor",
+	vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+	vim.api.nvim_buf_set_option(buf, 'filetype', 'markdown')
+	
+	-- Calculate position (centered, slightly below cursor)
+	local win_height = vim.api.nvim_get_option("lines")
+	local win_width = vim.api.nvim_get_option("columns")
+	
+	local win_opts = {
+		relative = "editor",
 		width = width,
 		height = height,
-		col = 0,
-		row = 1,
+		col = math.floor((win_width - width) / 2),
+		row = math.floor(row - 3 + (win_height - height) / 3),
 		style = "minimal",
 		border = "rounded",
-		title = " " .. note_name .. " ",
-		title_pos = "center",
+		title = title,
+		title_pos = "center"
 	}
-
-	local win = vim.api.nvim_open_win(buf, false, opts)
-
-	-- Close the window with 'q' or Escape
-	vim.api.nvim_buf_set_keymap(buf, "n", "q", ":close<CR>", { noremap = true, silent = true })
-	vim.api.nvim_buf_set_keymap(buf, "n", "<Esc>", ":close<CR>", { noremap = true, silent = true })
-
-	-- Add autocommand to close when cursor moves
-	local augroup = vim.api.nvim_create_augroup("ObsidianTransclusionPreview", { clear = true })
+	
+	-- Create floating window
+	local win = vim.api.nvim_open_win(buf, false, win_opts)
+	
+	-- Set window highlight
+	vim.api.nvim_win_set_option(win, 'winhighlight', 'Normal:Pmenu,FloatBorder:PmenuSel')
+	
+	-- Add markdown syntax highlighting to the buffer
+	vim.api.nvim_buf_set_option(buf, 'syntax', 'markdown')
+	
+	-- Add keymappings to close the window
+	vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ':close<CR>', { noremap = true, silent = true })
+	vim.api.nvim_buf_set_keymap(buf, 'n', '<Esc>', ':close<CR>', { noremap = true, silent = true })
+	
+	-- Create an autocommand to close the preview when cursor moves
+	local preview_augroup = vim.api.nvim_create_augroup("ObsidianTransclusionPreview", { clear = true })
 	vim.api.nvim_create_autocmd("CursorMoved", {
-		group = augroup,
+		group = preview_augroup,
 		buffer = vim.api.nvim_get_current_buf(),
 		callback = function()
 			if vim.api.nvim_win_is_valid(win) then
 				vim.api.nvim_win_close(win, true)
+				vim.api.nvim_del_augroup_by_id(preview_augroup)
 			end
-			vim.api.nvim_del_augroup_by_id(augroup)
 		end,
-		once = true,
+		once = true
 	})
+	
+	print("Opened preview window")
+	print("=== PREVIEW COMPLETE ===\n")
 end
 
 -- Function to expand a transclusion in place
 function M.expand_transclusion()
+	print("\n=== EXPANDING TRANSCLUSION ===")
 	local bufnr = vim.api.nvim_get_current_buf()
 	local line_idx = vim.api.nvim_win_get_cursor(0)[1] - 1 -- 0-indexed
 	local line = vim.api.nvim_get_current_line()
+	print("Current line: " .. line)
 
 	local start_idx, end_idx, note_name, section_name = line:find(M.config.transclusion_pattern)
-
+	
 	if not start_idx then
+		print("No transclusion found on current line")
 		vim.notify("No transclusion found on current line", vim.log.levels.INFO)
 		return
 	end
+	
+	print("Pattern match found: " .. start_idx .. "-" .. end_idx)
+	print("Note name: " .. note_name .. (section_name and (", Section: " .. section_name) or ""))
 
 	note_name = note_name:gsub("^%s*(.-)%s*$", "%1") -- Trim whitespace
 	local file_path = M.find_note_file(note_name)
+	print("Looking for file: " .. note_name)
+	print("Full path: " .. (file_path or "file not found"))
 
 	if not file_path then
 		vim.notify("Note '" .. note_name .. "' not found", vim.log.levels.WARN)
@@ -400,20 +497,36 @@ function M.expand_transclusion()
 	local content = M.read_file_contents(file_path)
 
 	if not content then
+		print("Failed to read content from " .. file_path)
 		vim.notify("Failed to read content of '" .. note_name .. "'", vim.log.levels.ERROR)
 		return
 	end
+	
+	print("Read " .. #content .. " bytes from " .. file_path)
 
 	-- Extract the specified section if any
 	if section_name then
+		print("Extracting section: " .. section_name)
 		content = M.extract_section(content, section_name)
+		print("Extracted section content: " .. #content .. " bytes")
 	end
 
 	-- Get leading whitespace
 	local leading_whitespace = line:match("^%s*") or ""
+	print("Leading whitespace: '" .. leading_whitespace .. "'")
 
 	-- Split the content into lines
 	local content_lines = vim.split(content, "\n")
+	print("Content split into " .. #content_lines .. " lines")
+	
+	-- Preview the content we're going to insert
+	print("Content to insert:")
+	for i = 1, math.min(5, #content_lines) do
+		print("  " .. i .. ": " .. content_lines[i])
+	end
+	if #content_lines > 5 then
+		print("  ... (truncated, total " .. #content_lines .. " lines)")
+	end
 
 	-- Add leading whitespace to each line except the first
 	for i = 2, #content_lines do
@@ -423,9 +536,12 @@ function M.expand_transclusion()
 	-- Replace the transclusion marker with the content
 	local before_marker = line:sub(1, start_idx - 1)
 	local after_marker = line:sub(end_idx + 1)
+	print("Before marker: '" .. before_marker .. "'")
+	print("After marker: '" .. after_marker .. "'")
 
 	-- First line combines before_marker + first content line + after_marker
 	local first_line = before_marker .. content_lines[1] .. after_marker
+	print("First line will be: " .. first_line)
 
 	-- Prepare the replacement lines
 	local replacement_lines = { first_line }
@@ -433,11 +549,13 @@ function M.expand_transclusion()
 		table.insert(replacement_lines, content_lines[i])
 	end
 
+	print("Will replace line " .. (line_idx + 1) .. " with " .. #replacement_lines .. " lines")
 	-- Replace the current line with the expanded content
 	vim.api.nvim_buf_set_lines(bufnr, line_idx, line_idx + 1, false, replacement_lines)
 
 	-- Notify user
 	vim.notify("Expanded transclusion of '" .. note_name .. "'", vim.log.levels.INFO)
+	print("=== EXPANSION COMPLETE ===\n")
 end
 
 -- Set up key mappings

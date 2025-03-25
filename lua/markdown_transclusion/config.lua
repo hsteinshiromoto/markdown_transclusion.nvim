@@ -66,17 +66,20 @@ end
 
 -- Function to create highlight groups
 function M.setup_highlights()
-	-- Define highlight links if they don't exist
+	-- Define highlight links with more pronounced colors
 	local highlights = {
-		ObsidianTransclusionMarker = { link = "Special" },
-		ObsidianTransclusionPath = { link = "String" },
-		ObsidianTransclusionVirtualText = { link = "Comment" },
-		ObsidianTransclusionWarning = { link = "WarningMsg" },
+		ObsidianTransclusionMarker = { fg = "#c678dd", bold = true },  -- Purple, bold for markers
+		ObsidianTransclusionPath = { fg = "#98c379" },                 -- Green for the path
+		ObsidianTransclusionVirtualText = { fg = "#636d83", italic = true }, -- Grey, italic for virtual text
+		ObsidianTransclusionWarning = { fg = "#e06c75" },              -- Red for warnings
 	}
 
 	for group_name, definition in pairs(highlights) do
 		vim.api.nvim_set_hl(0, group_name, definition)
 	end
+	
+	-- Print confirmation of highlight setup
+	print("Markdown transclusion highlights set up")
 end
 
 return M

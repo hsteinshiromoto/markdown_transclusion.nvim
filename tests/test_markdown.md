@@ -1,6 +1,6 @@
 # Test Markdown File
 
-This is a test markdown file to test transclusions.
+This is a test file to verify transclusions.
 
 Below is a transclusion:
 
