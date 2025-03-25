@@ -57,21 +57,29 @@ end
 
 -- Find a note file by name
 function M.find_note_file(name)
+	-- Debug info
+	vim.notify("Looking for note: " .. name .. " in directory: " .. M.config.notes_dir, vim.log.levels.INFO)
+
 	-- First try with the name as-is
 	local direct_path = M.config.notes_dir .. "/" .. name
+	vim.notify("Trying path: " .. direct_path, vim.log.levels.INFO)
 	if vim.fn.filereadable(direct_path) == 1 then
+		vim.notify("Found direct match: " .. direct_path, vim.log.levels.INFO)
 		return direct_path
 	end
 
 	-- Try with each valid extension
 	for _, ext in ipairs(M.config.valid_extensions) do
 		local path_with_ext = M.config.notes_dir .. "/" .. name .. "." .. ext
+		vim.notify("Trying path with extension: " .. path_with_ext, vim.log.levels.INFO)
 		if vim.fn.filereadable(path_with_ext) == 1 then
+			vim.notify("Found with extension: " .. path_with_ext, vim.log.levels.INFO)
 			return path_with_ext
 		end
 	end
 
 	-- Not found
+	vim.notify("Note not found: " .. name, vim.log.levels.WARN)
 	return nil
 end
 
@@ -145,7 +153,7 @@ function M.render_transclusions()
 
 	-- Find all transclusion markers
 	for i, line in ipairs(lines) do
-		local start_idx, end_idx, note_name, _, section_name = line:find(M.config.transclusion_pattern)
+		local start_idx, end_idx, note_name, section_name = line:find(M.config.transclusion_pattern)
 
 		if start_idx then
 			table.insert(transclusions, {
@@ -250,7 +258,7 @@ end
 -- Function to preview transcluded content
 function M.preview_transclusion()
 	local line = vim.api.nvim_get_current_line()
-	local start_idx, end_idx, note_name, _, section_name = line:find(M.config.transclusion_pattern)
+	local start_idx, end_idx, note_name, section_name = line:find(M.config.transclusion_pattern)
 
 	if not start_idx then
 		vim.notify("No transclusion found on current line", vim.log.levels.INFO)
@@ -327,7 +335,7 @@ function M.expand_transclusion()
 	local line_idx = vim.api.nvim_win_get_cursor(0)[1] - 1 -- 0-indexed
 	local line = vim.api.nvim_get_current_line()
 
-	local start_idx, end_idx, note_name, _, section_name = line:find(M.config.transclusion_pattern)
+	local start_idx, end_idx, note_name, section_name = line:find(M.config.transclusion_pattern)
 
 	if not start_idx then
 		vim.notify("No transclusion found on current line", vim.log.levels.INFO)
