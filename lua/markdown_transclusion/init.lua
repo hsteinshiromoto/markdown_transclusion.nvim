@@ -1,7 +1,7 @@
 -- lua/markdown_transclusion/init.lua
 -- A Neovim plugin that implements Obsidian-style transclusion functionality
 
-local config = require("obsidian-transclusion.config")
+local config = require("obsidian_transclusion.config")
 local M = {}
 
 -- Will hold the actual configuration after setup
@@ -111,7 +111,7 @@ function M.extract_section(content, section_name)
 		if header_match then
 			local level = #header_match
 			local title = header_match:match("^#+%s+(.+)$")
-			
+
 			if title == section_name then
 				in_section = true
 				section_level = level
@@ -381,7 +381,7 @@ function M.setup_keymaps()
 	vim.api.nvim_set_keymap(
 		"n",
 		"gp",
-		'<cmd>lua require("obsidian-transclusion").preview_transclusion()<CR>',
+		'<cmd>lua require("obsidian_transclusion").preview_transclusion()<CR>',
 		{ noremap = true, silent = true, desc = "Preview transclusion" }
 	)
 
@@ -389,7 +389,7 @@ function M.setup_keymaps()
 	vim.api.nvim_set_keymap(
 		"n",
 		"ge",
-		'<cmd>lua require("obsidian-transclusion").expand_transclusion()<CR>',
+		'<cmd>lua require("obsidian_transclusion").expand_transclusion()<CR>',
 		{ noremap = true, silent = true, desc = "Expand transclusion" }
 	)
 end
