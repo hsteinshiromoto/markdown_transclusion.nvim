@@ -145,7 +145,7 @@ function M.render_transclusions()
 
 	-- Find all transclusion markers
 	for i, line in ipairs(lines) do
-		local start_idx, end_idx, note_name, section_name = line:find(M.config.transclusion_pattern)
+		local start_idx, end_idx, note_name, _, section_name = line:find(M.config.transclusion_pattern)
 
 		if start_idx then
 			table.insert(transclusions, {
@@ -250,7 +250,7 @@ end
 -- Function to preview transcluded content
 function M.preview_transclusion()
 	local line = vim.api.nvim_get_current_line()
-	local start_idx, end_idx, note_name = line:find(M.config.transclusion_pattern)
+	local start_idx, end_idx, note_name, _, section_name = line:find(M.config.transclusion_pattern)
 
 	if not start_idx then
 		vim.notify("No transclusion found on current line", vim.log.levels.INFO)
@@ -270,6 +270,11 @@ function M.preview_transclusion()
 	if not content then
 		vim.notify("Failed to read content of '" .. note_name .. "'", vim.log.levels.ERROR)
 		return
+	end
+
+	-- Extract the specified section if any
+	if section_name then
+		content = M.extract_section(content, section_name)
 	end
 
 	-- Create a floating window to display the content
@@ -322,7 +327,7 @@ function M.expand_transclusion()
 	local line_idx = vim.api.nvim_win_get_cursor(0)[1] - 1 -- 0-indexed
 	local line = vim.api.nvim_get_current_line()
 
-	local start_idx, end_idx, note_name = line:find(M.config.transclusion_pattern)
+	local start_idx, end_idx, note_name, _, section_name = line:find(M.config.transclusion_pattern)
 
 	if not start_idx then
 		vim.notify("No transclusion found on current line", vim.log.levels.INFO)
@@ -342,6 +347,11 @@ function M.expand_transclusion()
 	if not content then
 		vim.notify("Failed to read content of '" .. note_name .. "'", vim.log.levels.ERROR)
 		return
+	end
+
+	-- Extract the specified section if any
+	if section_name then
+		content = M.extract_section(content, section_name)
 	end
 
 	-- Get leading whitespace

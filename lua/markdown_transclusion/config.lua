@@ -12,7 +12,7 @@ M.defaults = {
 	valid_extensions = { "md", "markdown" },
 
 	-- Pattern to identify transclusion syntax (default: Obsidian's ![[note]] with optional section)
-	transclusion_pattern = "!%[%[(.-)(?:#(.-))?%]%]",
+	transclusion_pattern = "!%[%[(.-)(#(.-))?%]%]",
 
 	-- Virtual text to indicate transclusion
 	virtual_text_enabled = true,
