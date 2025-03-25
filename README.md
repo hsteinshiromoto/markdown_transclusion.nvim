@@ -18,10 +18,10 @@ A Neovim plugin that brings Obsidian-style transclusion functionality to your ma
 
 ```lua
 {
-  "username/obsidian-transclusion.nvim",
+  "hsteinshiromoto/obsidian_transclusion.nvim",
   ft = { "markdown", "md" },
   config = function()
-    require("obsidian-transclusion").setup({
+    require("obsidian_transclusion").setup({
       notes_dir = vim.fn.expand("~/Notes"),
       -- Additional options (see Configuration section)
     })
@@ -33,9 +33,9 @@ A Neovim plugin that brings Obsidian-style transclusion functionality to your ma
 
 ```lua
 use {
-  "username/obsidian-transclusion.nvim",
+  "hsteinshiromoto/obsidian_transclusion.nvim",
   config = function()
-    require("obsidian-transclusion").setup({
+    require("obsidian_transclusion").setup({
       notes_dir = vim.fn.expand("~/Notes"),
     })
   end
@@ -47,13 +47,13 @@ use {
 Clone the repository and add it to your runtimepath:
 
 ```bash
-git clone https://github.com/username/obsidian-transclusion.nvim ~/.config/nvim/pack/plugins/start/obsidian-transclusion.nvim
+git clone https://github.com/hsteinshiromoto/obsidian_transclusion.nvim ~/.config/nvim/pack/plugins/start/obsidian_transclusion.nvim
 ```
 
 Then initialize the plugin in your `init.lua`:
 
 ```lua
-require("obsidian-transclusion").setup({
+require("obsidian_transclusion").setup({
   notes_dir = vim.fn.expand("~/Notes"),
 })
 ```
@@ -106,7 +106,7 @@ The plugin will extract everything from the "Main Content" header up to (but not
 Here are all available configuration options with their default values:
 
 ```lua
-require("obsidian-transclusion").setup({
+require("obsidian_transclusion").setup({
   -- Base directory for notes (default: current working directory)
   notes_dir = vim.fn.getcwd(),
 
@@ -137,14 +137,14 @@ If you want to customize the default key mappings, you can do so after the setup
 vim.g.obsidian_transclusion_no_default_keymaps = true
 
 -- Setup the plugin
-require("obsidian-transclusion").setup({
+require("obsidian_transclusion").setup({
   -- Your config here
 })
 
 -- Define your own keymaps
-vim.api.nvim_set_keymap('n', '<leader>op', '<cmd>lua require("obsidian-transclusion").preview_transclusion()<CR>',
+vim.api.nvim_set_keymap('n', '<leader>op', '<cmd>lua require("obsidian_transclusion").preview_transclusion()<CR>',
   { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>oe', '<cmd>lua require("obsidian-transclusion").expand_transclusion()<CR>',
+vim.api.nvim_set_keymap('n', '<leader>oe', '<cmd>lua require("obsidian_transclusion").expand_transclusion()<CR>',
   { noremap = true, silent = true })
 ```
 
