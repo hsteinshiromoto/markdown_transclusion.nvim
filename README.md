@@ -1,10 +1,11 @@
 # Obsidian Transclusion for Neovim
 
-A Neovim plugin that brings Obsidian-style transclusion functionality to your markdown files. This plugin allows you to include the contents of one note within another using the familiar `![[note]]` syntax.
+A Neovim plugin that brings Obsidian-style transclusion functionality to your markdown files. This plugin allows you to include the contents of one note within another using the familiar `![[note]]` syntax, with support for transcluding specific sections using headers.
 
 ## Features
 
 - ✨ **Automatic Detection**: Recognizes Obsidian-style `![[note]]` transclusion syntax
+- 📑 **Section Transclusion**: Include specific sections of notes using `![[note#section]]` syntax
 - 🎨 **Visual Indicators**: Highlights transclusion markers and adds virtual text showing the source
 - 👁️ **Preview**: Quickly preview transcluded content in a floating window without leaving your current file
 - 📝 **Expansion**: Expand transclusions in-place when you need the actual content
@@ -62,8 +63,33 @@ require("obsidian-transclusion").setup({
 ### Basic Usage
 
 1. Create markdown notes with the extension `.md` or `.markdown`
-2. Use the Obsidian-style syntax to transclude content: `![[note-name]]`
+2. Use the Obsidian-style syntax to transclude content:
+   - Transclude entire file: `![[note-name]]`
+   - Transclude specific section: `![[note-name#section-name]]`
 3. The plugin will automatically highlight these transclusions and add virtual text
+
+### Section Transclusion
+
+You can transclude specific sections of a markdown file by adding a `#` followed by the section name after the note name. The section name should match exactly with the header in the markdown file.
+
+For example, if you have a file `note.md`:
+```markdown
+# Introduction
+Some intro text...
+
+# Main Content
+Main content here...
+
+## Subsection
+More content...
+```
+
+You can transclude just the main content section using:
+```markdown
+![[note#Main Content]]
+```
+
+The plugin will extract everything from the "Main Content" header up to (but not including) the next header of the same or higher level. In this case, it would include the "Subsection" content as well since it's a lower-level header.
 
 ### Key Mappings
 
@@ -87,8 +113,8 @@ require("obsidian-transclusion").setup({
   -- File extensions to consider for transclusion
   valid_extensions = { "md", "markdown" },
 
-  -- Pattern to identify transclusion syntax
-  transclusion_pattern = "!%[%[(.-)%]%]",
+  -- Pattern to identify transclusion syntax (supports section transclusion)
+  transclusion_pattern = "!%[%[(.-)(?:#(.-))?%]%]",
 
   -- Virtual text to indicate transclusion
   virtual_text_enabled = true,
@@ -133,6 +159,10 @@ Suppose you have these files:
 ## Programming Projects
 - Create a markdown parser
 - Build a personal knowledge base
+
+## Writing Projects
+- Write a technical blog post
+- Create documentation
 ```
 
 2. `~/Notes/WeeklyGoals.md`:
@@ -148,7 +178,7 @@ Suppose you have these files:
 # Main Working Document
 
 ## Project Ideas Section
-![[ProjectIdeas]]
+![[ProjectIdeas#Programming Projects]]
 
 ## This Week's Goals
 ![[WeeklyGoals]]
@@ -156,7 +186,7 @@ Suppose you have these files:
 
 When you open `MainNote.md` in Neovim, the plugin will:
 - Highlight the transclusion markers
-- Add virtual text showing the source files
+- Add virtual text showing the source files and sections
 - Allow you to preview or expand the content on demand
 
 ## Screenshots
