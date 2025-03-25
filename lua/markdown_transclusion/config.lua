@@ -11,6 +11,9 @@ M.defaults = {
 	-- File extensions to consider for transclusion (default: md, markdown)
 	valid_extensions = { "md", "markdown" },
 
+	-- Search recursively in subdirectories
+	recursive_search = true,
+
 	-- Pattern to identify transclusion syntax (default: Obsidian's ![[note]] with optional section)
 	transclusion_pattern = "!%[%[([^#]*)#?([^%]]*)%]%]",
 

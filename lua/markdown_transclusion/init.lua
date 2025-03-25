@@ -78,6 +78,53 @@ function M.find_note_file(name)
 		end
 	end
 
+	-- Recursive search through subdirectories if enabled
+	if M.config.recursive_search then
+		local found_files = {}
+		
+		-- Function to search recursively
+		local function search_dir(dir)
+			local handle = vim.loop.fs_scandir(dir)
+			if not handle then
+				return
+			end
+			
+			while true do
+				local name_scan, type_scan = vim.loop.fs_scandir_next(handle)
+				if not name_scan then 
+					break 
+				end
+				
+				local path = dir .. "/" .. name_scan
+				
+				if type_scan == "directory" then
+					search_dir(path)
+				elseif type_scan == "file" then
+					-- Check if file matches the name we're looking for
+					local file_base = vim.fn.fnamemodify(name_scan, ":r")
+					local file_ext = vim.fn.fnamemodify(name_scan, ":e")
+					
+					if file_base == name and vim.tbl_contains(M.config.valid_extensions, file_ext) then
+						table.insert(found_files, path)
+					end
+				end
+			end
+		end
+		
+		search_dir(M.config.notes_dir)
+		
+		-- Return the first matching file if any found
+		if #found_files > 0 then
+			vim.notify("Found in subdirectory: " .. found_files[1], vim.log.levels.INFO)
+			return found_files[1]
+		end
+		
+		-- If multiple files found, log a warning
+		if #found_files > 1 then
+			vim.notify("Multiple matching files found for note: " .. name, vim.log.levels.WARN)
+		end
+	end
+
 	-- Not found
 	vim.notify("Note not found: " .. name, vim.log.levels.WARN)
 	return nil

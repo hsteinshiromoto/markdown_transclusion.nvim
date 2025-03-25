@@ -9,6 +9,7 @@ A Neovim plugin that brings Obsidian-style transclusion functionality to your ma
 - 🎨 **Visual Indicators**: Highlights transclusion markers and adds virtual text showing the source
 - 👁️ **Preview**: Quickly preview transcluded content in a floating window without leaving your current file
 - 📝 **Expansion**: Expand transclusions in-place when you need the actual content
+- 🔍 **Recursive Search**: Automatically finds notes in subdirectories of your notes folder
 - ⚠️ **Warnings**: Visual indicators for missing files
 - 🔄 **Auto-update**: Transclusions are automatically rendered when opening and saving files
 
@@ -91,6 +92,31 @@ You can transclude just the main content section using:
 
 The plugin will extract everything from the "Main Content" header up to (but not including) the next header of the same or higher level. In this case, it would include the "Subsection" content as well since it's a lower-level header.
 
+### Recursive Search
+
+By default, the plugin will search for notes not only in the main notes directory but also in all its subdirectories. This means you can organize your notes in a hierarchical folder structure while still being able to reference them with simple transclusion syntax.
+
+For example, if you have the following directory structure:
+```
+notes/
+  ├── projects/
+  │   └── project1.md
+  ├── daily/
+  │   └── today.md
+  └── main.md
+```
+
+You can reference any of these files with their base name:
+```markdown
+![[project1]]  <!-- Will find notes/projects/project1.md -->
+![[today]]     <!-- Will find notes/daily/today.md -->
+![[main]]      <!-- Will find notes/main.md -->
+```
+
+If you have multiple files with the same base name in different subdirectories, the plugin will use the first one it finds and log a warning about multiple matches.
+
+To disable recursive search, set `recursive_search = false` in your configuration.
+
 ### Key Mappings
 
 - `gp`: Preview the transcluded content in a floating window
@@ -107,11 +133,14 @@ Here are all available configuration options with their default values:
 
 ```lua
 require("markdown_transclusion").setup({
-  -- Base directory for notes (default: current working directory)
-  notes_dir = vim.fn.getcwd(),
+  -- Base directory for notes (default: notes/ directory relative to git root)
+  notes_dir = vim.fn.fnamemodify(vim.fn.finddir('.git', '.;'), ':h') .. '/notes',
 
   -- File extensions to consider for transclusion
   valid_extensions = { "md", "markdown" },
+  
+  -- Search recursively in subdirectories
+  recursive_search = true,
 
   -- Pattern to identify transclusion syntax (supports section transclusion)
   transclusion_pattern = "!%[%[([^#]*)#?([^%]]*)%]%]",
@@ -125,6 +154,9 @@ require("markdown_transclusion").setup({
 
   -- Show warnings for missing files
   show_warnings = true,
+  
+  -- Automatically setup keymaps
+  setup_keymaps = true,
 })
 ```
 
