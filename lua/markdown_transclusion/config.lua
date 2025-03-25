@@ -5,8 +5,8 @@ local M = {}
 
 -- Default configuration values
 M.defaults = {
-	-- Base directory for notes (default: current working directory)
-	notes_dir = vim.fn.getcwd(),
+	-- Base directory for notes (default: notes/ directory relative to git root)
+	notes_dir = vim.fn.fnamemodify(vim.fn.finddir('.git', '.;'), ':h') .. '/notes',
 
 	-- File extensions to consider for transclusion (default: md, markdown)
 	valid_extensions = { "md", "markdown" },
