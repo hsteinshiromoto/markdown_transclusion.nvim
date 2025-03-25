@@ -1,7 +1,7 @@
 -- lua/markdown_transclusion/init.lua
 -- A Neovim plugin that implements Obsidian-style transclusion functionality
 
-local config = require("obsidian_transclusion.config")
+local config = require("markdown_transclusion.config")
 local M = {}
 
 -- Will hold the actual configuration after setup
@@ -90,7 +90,7 @@ end
 -- Get the namespace for virtual text and extmarks
 function M.get_namespace()
 	if not M.namespace then
-		M.namespace = vim.api.nvim_create_namespace("obsidian_transclusion")
+		M.namespace = vim.api.nvim_create_namespace("markdown_transclusion")
 	end
 	return M.namespace
 end
@@ -381,7 +381,7 @@ function M.setup_keymaps()
 	vim.api.nvim_set_keymap(
 		"n",
 		"gp",
-		'<cmd>lua require("obsidian_transclusion").preview_transclusion()<CR>',
+		'<cmd>lua require("markdown_transclusion").preview_transclusion()<CR>',
 		{ noremap = true, silent = true, desc = "Preview transclusion" }
 	)
 
@@ -389,7 +389,7 @@ function M.setup_keymaps()
 	vim.api.nvim_set_keymap(
 		"n",
 		"ge",
-		'<cmd>lua require("obsidian_transclusion").expand_transclusion()<CR>',
+		'<cmd>lua require("markdown_transclusion").expand_transclusion()<CR>',
 		{ noremap = true, silent = true, desc = "Expand transclusion" }
 	)
 end
