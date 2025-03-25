@@ -95,6 +95,42 @@ function M.get_namespace()
 	return M.namespace
 end
 
+-- Extract a section from markdown content based on header
+function M.extract_section(content, section_name)
+	if not section_name then
+		return content
+	end
+
+	local lines = vim.split(content, "\n")
+	local result = {}
+	local in_section = false
+	local section_level = 0
+
+	for _, line in ipairs(lines) do
+		local header_match = line:match("^(#+)%s+(.+)$")
+		if header_match then
+			local level = #header_match
+			local title = header_match:match("^#+%s+(.+)$")
+			
+			if title == section_name then
+				in_section = true
+				section_level = level
+				table.insert(result, line)
+			elseif in_section then
+				-- Check if we've hit a header of the same or higher level
+				if level <= section_level then
+					break
+				end
+				table.insert(result, line)
+			end
+		elseif in_section then
+			table.insert(result, line)
+		end
+	end
+
+	return table.concat(result, "\n")
+end
+
 -- Render all transclusions in the current buffer
 function M.render_transclusions()
 	local bufnr = vim.api.nvim_get_current_buf()
@@ -109,7 +145,7 @@ function M.render_transclusions()
 
 	-- Find all transclusion markers
 	for i, line in ipairs(lines) do
-		local start_idx, end_idx, note_name = line:find(M.config.transclusion_pattern)
+		local start_idx, end_idx, note_name, section_name = line:find(M.config.transclusion_pattern)
 
 		if start_idx then
 			table.insert(transclusions, {
@@ -117,6 +153,7 @@ function M.render_transclusions()
 				start_idx = start_idx,
 				end_idx = end_idx,
 				note_name = note_name:gsub("^%s*(.-)%s*$", "%1"), -- Trim whitespace
+				section_name = section_name and section_name:gsub("^%s*(.-)%s*$", "%1") or nil, -- Trim whitespace
 			})
 		end
 	end
@@ -129,10 +166,17 @@ function M.render_transclusions()
 			local content = M.read_file_contents(file_path)
 
 			if content then
+				-- Extract the specified section if any
+				local transcluded_content = M.extract_section(content, t.section_name)
+
 				-- Add virtual text if enabled
 				if M.config.virtual_text_enabled then
+					local virtual_text = " Transcluded from: " .. t.note_name
+					if t.section_name then
+						virtual_text = virtual_text .. " (section: " .. t.section_name .. ")"
+					end
 					vim.api.nvim_buf_set_extmark(bufnr, namespace, t.line_idx, 0, {
-						virt_text = { { " Transcluded from: " .. t.note_name, M.config.virtual_text_hl_group } },
+						virt_text = { { virtual_text, M.config.virtual_text_hl_group } },
 						virt_text_pos = "eol",
 					})
 				end

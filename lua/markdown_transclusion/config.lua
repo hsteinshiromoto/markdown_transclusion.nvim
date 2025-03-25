@@ -11,8 +11,8 @@ M.defaults = {
 	-- File extensions to consider for transclusion (default: md, markdown)
 	valid_extensions = { "md", "markdown" },
 
-	-- Pattern to identify transclusion syntax (default: Obsidian's ![[note]])
-	transclusion_pattern = "!%[%[(.-)%]%]",
+	-- Pattern to identify transclusion syntax (default: Obsidian's ![[note]] with optional section)
+	transclusion_pattern = "!%[%[(.-)(?:#(.-))?%]%]",
 
 	-- Virtual text to indicate transclusion
 	virtual_text_enabled = true,
