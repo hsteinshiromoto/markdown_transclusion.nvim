@@ -15,6 +15,13 @@ M.config = {}
 -- Store parsed gitignore patterns
 M.gitignore_patterns = nil
 
+-- Debug print helper function
+function M.debug_print(msg)
+	if M.config.debug then
+		print("[DEBUG] " .. msg)
+	end
+end
+
 -- Setup function to initialize the plugin with user configuration
 function M.setup(opts)
 	-- Apply and validate config
@@ -148,45 +155,53 @@ function M.should_ignore_path(path)
 end
 
 -- Find a note file by name
+---Find a markdown note file by name in the configured notes directory.
+---
+---This function searches for a file with the given name in the notes directory.
+---It tries looking for the exact name, then with valid extensions, and 
+---finally recursively in subdirectories if enabled.
+---
+---@param name string The name of the note to find (without extension)
+---@return string|nil The full path to the note file if found, nil otherwise
 function M.find_note_file(name)
 	-- Debug info
-	print("\n=== FINDING NOTE FILE ===")
-	print("Looking for note: '" .. name .. "'")
-	print("Notes directory: '" .. M.config.notes_dir .. "'")
-	print("Valid extensions: " .. table.concat(M.config.valid_extensions, ", "))
+	M.debug_print("\n=== FINDING NOTE FILE ===")
+	M.debug_print("Looking for note: '" .. name .. "'")
+	M.debug_print("Notes directory: '" .. M.config.notes_dir .. "'")
+	M.debug_print("Valid extensions: " .. table.concat(M.config.valid_extensions, ", "))
 
 	-- First try with the name as-is
 	local direct_path = M.config.notes_dir .. "/" .. name
-	print("Trying direct path: " .. direct_path)
+	M.debug_print("Trying direct path: " .. direct_path)
 	if vim.fn.filereadable(direct_path) == 1 then
-		print("✓ Found direct match: " .. direct_path)
+		M.debug_print("✓ Found direct match: " .. direct_path)
 		return direct_path
 	else
-		print("✗ File not found at direct path")
+		M.debug_print("✗ File not found at direct path")
 	end
 
 	-- Try with each valid extension
 	for _, ext in ipairs(M.config.valid_extensions) do
 		local path_with_ext = M.config.notes_dir .. "/" .. name .. "." .. ext
-		print("Trying path with extension: " .. path_with_ext)
+		M.debug_print("Trying path with extension: " .. path_with_ext)
 		if vim.fn.filereadable(path_with_ext) == 1 then
-			print("✓ Found with extension: " .. path_with_ext)
+			M.debug_print("✓ Found with extension: " .. path_with_ext)
 			return path_with_ext
 		else
-			print("✗ File not found with extension: " .. ext)
+			M.debug_print("✗ File not found with extension: " .. ext)
 		end
 	end
 
 	-- Recursive search through subdirectories if enabled
 	if M.config.recursive_search then
-		print("Performing recursive search in: " .. M.config.notes_dir)
+		M.debug_print("Performing recursive search in: " .. M.config.notes_dir)
 		local found_files = {}
 		
 		-- Function to search recursively
 		local function search_dir(dir)
 			local handle = vim.loop.fs_scandir(dir)
 			if not handle then
-				print("✗ Cannot scan directory: " .. dir)
+				M.debug_print("✗ Cannot scan directory: " .. dir)
 				return
 			end
 			
@@ -201,7 +216,7 @@ function M.find_note_file(name)
 				if type_scan == "directory" then
 					-- Skip if this directory should be ignored
 					if not M.should_ignore_path(path) then
-						print("Searching subdirectory: " .. path)
+						M.debug_print("Searching subdirectory: " .. path)
 						search_dir(path)
 					end
 				elseif type_scan == "file" then
@@ -210,7 +225,7 @@ function M.find_note_file(name)
 					local file_ext = vim.fn.fnamemodify(name_scan, ":e")
 					
 					if file_base == name and vim.tbl_contains(M.config.valid_extensions, file_ext) then
-						print("✓ Found matching file: " .. path)
+						M.debug_print("✓ Found matching file: " .. path)
 						table.insert(found_files, path)
 					end
 				end
@@ -221,31 +236,31 @@ function M.find_note_file(name)
 		
 		-- Return the first matching file if any found
 		if #found_files > 0 then
-			print("✓ Found in subdirectory: " .. found_files[1])
+			M.debug_print("✓ Found in subdirectory: " .. found_files[1])
 			return found_files[1]
 		else
-			print("✗ No files found in recursive search")
+			M.debug_print("✗ No files found in recursive search")
 		end
 		
 		-- If multiple files found, log a warning
 		if #found_files > 1 then
-			print("⚠ Multiple matching files found: " .. #found_files)
+			M.debug_print("⚠ Multiple matching files found: " .. #found_files)
 			for i, file in ipairs(found_files) do
-				print("  " .. i .. ": " .. file)
+				M.debug_print("  " .. i .. ": " .. file)
 			end
 		end
 	else
-		print("Recursive search is disabled")
+		M.debug_print("Recursive search is disabled")
 	end
 
 	-- Last resort: Check if the notes_dir is accessible
 	if vim.fn.isdirectory(M.config.notes_dir) ~= 1 then
-		print("⚠ Notes directory does not exist or is not accessible: " .. M.config.notes_dir)
+		M.debug_print("⚠ Notes directory does not exist or is not accessible: " .. M.config.notes_dir)
 	end
 
 	-- Not found
-	print("✗ Note not found: " .. name)
-	print("=== SEARCH COMPLETE ===\n")
+	M.debug_print("✗ Note not found: " .. name)
+	M.debug_print("=== SEARCH COMPLETE ===\n")
 	return nil
 end
 
@@ -442,21 +457,28 @@ function M.render_transclusions()
 end
 
 -- Preview transclusion in a floating window
+---Preview the content of a transclusion in a floating window.
+---
+---This function checks if the current line contains a transclusion marker
+---and if found, displays the referenced content in a floating window. Unlike
+---expand_transclusion, this only shows a preview without modifying the buffer.
+---
+---@return nil
 function M.preview_transclusion()
-	print("\n=== PREVIEW TRANSCLUSION ===")
+	M.debug_print("\n=== PREVIEW TRANSCLUSION ===")
 	local line = vim.api.nvim_get_current_line()
-	print("Current line: " .. line)
+	M.debug_print("Current line: " .. line)
 
 	local start_idx, end_idx, note_name, section_name = line:find(M.config.transclusion_pattern)
 
 	if not start_idx then
 		vim.notify("No transclusion found on current line", vim.log.levels.INFO)
-		print("No transclusion found on current line")
+		M.debug_print("No transclusion found on current line")
 		return
 	end
 
 	note_name = note_name:gsub("^%s*(.-)%s*$", "%1") -- Trim whitespace
-	print("Previewing note: " .. note_name .. (section_name and (" section: " .. section_name) or ""))
+	M.debug_print("Previewing note: " .. note_name .. (section_name and (" section: " .. section_name) or ""))
 	
 	local file_path = M.find_note_file(note_name)
 
@@ -556,33 +578,44 @@ function M.preview_transclusion()
 		once = true
 	})
 	
-	print("Opened preview window")
-	print("=== PREVIEW COMPLETE ===\n")
+	M.debug_print("Opened preview window")
+	M.debug_print("=== PREVIEW COMPLETE ===\n")
 end
 
 -- Function to expand a transclusion in place
+---Expands a markdown transclusion either in place or in a floating window.
+---
+---This function checks if the current line contains a transclusion marker
+---(in the format ![[note_name]] or ![[note_name#section]]). If found,
+---it loads the referenced note's content and:
+---  1. If snacks.nvim is available and enabled, displays the content in a
+---     floating window where the user can preview and decide to expand in place
+---  2. If snacks.nvim is not available or disabled, directly replaces the
+---     transclusion marker with the referenced content
+---
+---@return nil
 function M.expand_transclusion()
-	print("\n=== EXPANDING TRANSCLUSION ===")
+	M.debug_print("\n=== EXPANDING TRANSCLUSION ===")
 	local bufnr = vim.api.nvim_get_current_buf()
 	local line_idx = vim.api.nvim_win_get_cursor(0)[1] - 1 -- 0-indexed
 	local line = vim.api.nvim_get_current_line()
-	print("Current line: " .. line)
+	M.debug_print("Current line: " .. line)
 
 	local start_idx, end_idx, note_name, section_name = line:find(M.config.transclusion_pattern)
 	
 	if not start_idx then
-		print("No transclusion found on current line")
+		M.debug_print("No transclusion found on current line")
 		vim.notify("No transclusion found on current line", vim.log.levels.INFO)
 		return
 	end
 	
-	print("Pattern match found: " .. start_idx .. "-" .. end_idx)
-	print("Note name: " .. note_name .. (section_name and (", Section: " .. section_name) or ""))
+	M.debug_print("Pattern match found: " .. start_idx .. "-" .. end_idx)
+	M.debug_print("Note name: " .. note_name .. (section_name and (", Section: " .. section_name) or ""))
 
 	note_name = note_name:gsub("^%s*(.-)%s*$", "%1") -- Trim whitespace
 	local file_path = M.find_note_file(note_name)
-	print("Looking for file: " .. note_name)
-	print("Full path: " .. (file_path or "file not found"))
+	M.debug_print("Looking for file: " .. note_name)
+	M.debug_print("Full path: " .. (file_path or "file not found"))
 
 	if not file_path then
 		vim.notify("Note '" .. note_name .. "' not found", vim.log.levels.WARN)
@@ -592,38 +625,54 @@ function M.expand_transclusion()
 	local content = M.read_file_contents(file_path)
 
 	if not content then
-		print("Failed to read content from " .. file_path)
+		M.debug_print("Failed to read content from " .. file_path)
 		vim.notify("Failed to read content of '" .. note_name .. "'", vim.log.levels.ERROR)
 		return
 	end
 	
-	print("Read " .. #content .. " bytes from " .. file_path)
+	M.debug_print("Read " .. #content .. " bytes from " .. file_path)
 
 	-- Extract the specified section if any
 	if section_name then
-		print("Extracting section: " .. section_name)
+		M.debug_print("Extracting section: " .. section_name)
 		content = M.extract_section(content, section_name)
-		print("Extracted section content: " .. #content .. " bytes")
+		M.debug_print("Extracted section content: " .. #content .. " bytes")
 	end
 
 	-- Split the content into lines
 	local content_lines = vim.split(content, "\n")
-	print("Content split into " .. #content_lines .. " lines")
+	M.debug_print("Content split into " .. #content_lines .. " lines")
 	
 	-- Check if we should use snacks.nvim
-	if M.config.use_snacks then
+	if M.config.use_snacks and has_snacks then
 		-- Create title for the window
 		local title = note_name
 		if section_name then
 			title = title .. " > " .. section_name
 		end
 		
+		-- Ensure snacks_window is at least an empty table if not set
+		if not M.config.snacks_window then
+			M.config.snacks_window = {}
+		end
+		
 		-- Merge default window options with user config
-		local win_opts = vim.tbl_deep_extend("force", M.config.snacks_window or {}, {
+		local win_width = M.config.snacks_window.width or 80
+		local win_height = M.config.snacks_window.height or 20
+		
+		local win_opts = {
 			title = title,
-			width = math.min(M.config.snacks_window.width or 120, vim.o.columns - 10),
-			height = math.min(math.min(#content_lines + 2, M.config.snacks_window.height or 20), vim.o.lines - 10),
-		})
+			relative = M.config.snacks_window.relative or "cursor",
+			width = math.min(win_width, vim.o.columns - 10),
+			height = math.min(math.min(#content_lines + 2, win_height), vim.o.lines - 10),
+			border = M.config.snacks_window.border or "rounded",
+			style = M.config.snacks_window.style or "minimal",
+		}
+		
+		M.debug_print("Creating snacks window with options:")
+		for k, v in pairs(win_opts) do
+			M.debug_print("  " .. k .. ": " .. tostring(v))
+		end
 		
 		-- Display the expanded content in a snacks window
 		local win = snacks.win(content_lines, {
@@ -654,16 +703,34 @@ function M.expand_transclusion()
 		vim.api.nvim_buf_add_highlight(win.buf, ns_id, "Comment", #content_lines + 1, 0, -1)
 		vim.api.nvim_buf_add_highlight(win.buf, ns_id, "Comment", #content_lines + 2, 0, -1)
 
+		-- Make sure the window is focused and visible
+		vim.api.nvim_set_current_win(win.win)
+		
+		M.debug_print("Opened snacks window: " .. win.win)
 		vim.notify("Expanded transclusion of '" .. note_name .. "' in a window", vim.log.levels.INFO)
 	else
 		-- Use the original expand in place behavior
 		M.expand_in_place(bufnr, line_idx, line, start_idx, end_idx, note_name, content_lines)
 	end
 	
-	print("=== EXPANSION COMPLETE ===\n")
+	M.debug_print("=== EXPANSION COMPLETE ===\n")
 end
 
 -- Helper function to expand a transclusion in place
+---Replace a transclusion marker with the actual content in the buffer.
+---
+---This function performs the actual replacement of a transclusion marker
+---with the content from the referenced note file. It preserves leading
+---whitespace and handles the first line specially to maintain context.
+---
+---@param bufnr number The buffer number to modify
+---@param line_idx number The line index (0-based) where the transclusion marker is
+---@param line string The current line content containing the marker
+---@param start_idx number The start index of the transclusion marker
+---@param end_idx number The end index of the transclusion marker
+---@param note_name string The name of the note being transcluded
+---@param content_lines table A table of strings containing the content lines
+---@return nil
 function M.expand_in_place(bufnr, line_idx, line, start_idx, end_idx, note_name, content_lines)
 	-- Get leading whitespace
 	local leading_whitespace = line:match("^%s*") or ""

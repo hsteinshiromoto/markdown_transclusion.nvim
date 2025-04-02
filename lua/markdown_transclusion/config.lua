@@ -47,6 +47,9 @@ M.defaults = {
 		height = 20, -- Will be adjusted based on content and screen size
 		style = "minimal",
 	},
+	
+	-- Enable debug output (helpful for troubleshooting)
+	debug = false,
 }
 
 -- Function to validate and merge user config with defaults
