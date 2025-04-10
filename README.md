@@ -14,7 +14,7 @@ A Neovim plugin that implements Obsidian-style transclusion functionality for Ma
 ## Requirements
 
 - Neovim >= 0.7.0
-- [snacks.nvim](https://github.com/creativenull/snacks.nvim) for the floating window functionality
+- [snacks.nvim](https://github.com/creativenull/snacks.nvim) (optional, will fall back to built-in floating windows)
 - [obsidian.nvim](https://github.com/epwalsh/obsidian.nvim) (optional) for enhanced Obsidian vault integration
 
 ## Installation
@@ -79,7 +79,7 @@ require('markdown_transclusion').setup({
   },
   -- Obsidian.nvim integration
   use_obsidian = true,        -- Enable integration with obsidian.nvim
-  win_options = {             -- snacks.nvim window options
+  win_options = {             -- Window options (used by both snacks.nvim and built-in floating windows)
     relative = 'editor',
     width = 80,
     height = 20,
@@ -87,7 +87,7 @@ require('markdown_transclusion').setup({
     col = 120,
     border = 'rounded',
     title = 'Transclusion Preview',
-    title_pos = 'center',
+    title_pos = 'center',     -- Only used by snacks.nvim
   },
   format = {
     link_pattern = '!%[%[(.-)%]%]', -- Regex pattern for transclusion links
