@@ -20,10 +20,13 @@ local default_config = {
     title = 'Transclusion Preview',
     title_pos = 'center',
   },
+  -- Obsidian.nvim integration
+  use_obsidian = true, -- Enable integration with obsidian.nvim
   -- Transclusion format options
   format = {
     link_pattern = '!%[%[(.-)%]%]', -- Obsidian-style transclusion pattern: ![[file_name]]
     max_depth = 3, -- Max recursion depth for nested transclusions
+    link_prefix = '## ', -- Prefix for the linked title when using obsidian integration
   },
 }
 
